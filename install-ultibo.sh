@@ -1,11 +1,14 @@
 #!/bin/bash
-set -x
+set -x -e
 
-rm -rf $HOME/ultibo unzip downloads
+# This script implements the instructions at https://ultibo.org/wiki/Building_for_Debian
+#
+# It will destroy the current ultibo installation at $HOME/ulibo/core and re-install it
+#
 
+rm -rf $HOME/ultibo downloads preloads unzip
 
 function get {
-    echo $1
     wget --quiet -O downloads/$1.zip https://github.com/ultibohub/$1/archive/master.zip
 }
 
@@ -86,12 +89,6 @@ mv unzip/Core-master/source/packages/ultibounits \
        $HOME/ultibo/core/fpc/source/packages/ultibounits
 mv unzip/Core-master/units \
        $HOME/ultibo/core/fpc/units
-mkdir -p $HOME/ultibo/core/fpc/bin
-cp preloads/arm-none-eabi/bin/as      $HOME/ultibo/core/fpc/bin/arm-ultibo-as && \
-cp preloads/arm-none-eabi/bin/ld      $HOME/ultibo/core/fpc/bin/arm-ultibo-ld && \
-cp preloads/arm-none-eabi/bin/objcopy $HOME/ultibo/core/fpc/bin/arm-ultibo-objcopy && \
-cp preloads/arm-none-eabi/bin/objdump $HOME/ultibo/core/fpc/bin/arm-ultibo-objdump && \
-cp preloads/arm-none-eabi/bin/strip   $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
 
 # 
 # Once this is done, open a terminal window and change to the folder containing the Ultibo sources:
@@ -99,7 +96,7 @@ cp preloads/arm-none-eabi/bin/strip   $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
 #  cd $HOME/ultibo/core/fpc/source
 # 
 
-cd $HOME/ultibo/core/fpc/source
+pushd $HOME/ultibo/core/fpc/source
 
 
 # Do the following steps in order, checking that each was completed successfully before continuing:
@@ -122,7 +119,7 @@ make install OS_TARGET=linux CPU_TARGET=x86_64 INSTALL_PREFIX=$HOME/ultibo/core/
 #  cp $HOME/ultibo/core/fpc/source/compiler/ppc386 $HOME/ultibo/core/fpc/bin/ppc386
 # 
 
-cp $HOME/ultibo/core/fpc/source/compiler/ppx64 $HOME/ultibo/core/fpc/bin/ppx64
+cp $HOME/ultibo/core/fpc/source/compiler/ppcx64 $HOME/ultibo/core/fpc/bin/ppcx64
 
 # Run the following to check that it shows as version 3.1.1 and lists <code>ultibo</code> under the supported targets.
 # 
@@ -153,6 +150,16 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  cp $HOME/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/bin/objdump $HOME/ultibo/core/fpc/bin/arm-ultibo-objdump
 #  cp $HOME/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/bin/strip $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
 # 
+
+popd
+
+tar zxf preloads.tgz
+cp preloads/arm-none-eabi/bin/as      $HOME/ultibo/core/fpc/bin/arm-ultibo-as && \
+cp preloads/arm-none-eabi/bin/ld      $HOME/ultibo/core/fpc/bin/arm-ultibo-ld && \
+cp preloads/arm-none-eabi/bin/objcopy $HOME/ultibo/core/fpc/bin/arm-ultibo-objcopy && \
+cp preloads/arm-none-eabi/bin/objdump $HOME/ultibo/core/fpc/bin/arm-ultibo-objdump && \
+cp preloads/arm-none-eabi/bin/strip   $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
+
 # If you like you can now delete the extracted folder because none of the other files it contains are needed for Ultibo.
 # 
 # === Building the FPC ARM Cross Compiler ===
@@ -164,10 +171,16 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 # 
 #  cd $HOME/ultibo/core/fpc/source
 # 
+
+pushd $HOME/ultibo/core/fpc/source
+
 # Export the path to our FPC 3.1.1 Ultibo edition:
 # 
 #  export PATH=$HOME/ultibo/core/fpc/bin:$PATH
 # 
+
+export PATH=$HOME/ultibo/core/fpc/bin:$PATH
+
 # Build the ARM cross compiler using these commands, make sure you check that each step was successful before continuing:
 # 
 #  make distclean OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a BINUTILSPREFIX=arm-ultibo- FPCOPT="-dFPC_ARMHF" CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/ppc386
@@ -180,6 +193,19 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 # 
 #  cp $HOME/ultibo/core/fpc/source/compiler/ppcrossarm $HOME/ultibo/core/fpc/bin/ppcrossarm
 # 
+
+apt-get -y install libc6-i386
+
+make distclean OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a BINUTILSPREFIX=arm-ultibo- FPCOPT="-dFPC_ARMHF" CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/ppcx64
+
+make all OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a BINUTILSPREFIX=arm-ultibo- FPCOPT="-dFPC_ARMHF" CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/ppcx64
+
+make crossinstall BINUTILSPREFIX=arm-ultibo- FPCOPT="-dFPC_ARMHF" CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPC=$HOME/ultibo/core/fpc/bin/ppcx64 INSTALL_PREFIX=$HOME/ultibo/core/fpc
+
+cp $HOME/ultibo/core/fpc/source/compiler/ppcrossarm $HOME/ultibo/core/fpc/bin/ppcrossarm
+
+popd
+
 # === Building the Ultibo RTL ===
 # ----
 # 
@@ -205,6 +231,15 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  make rtl_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl
 # 
 # 
+
+pushd $HOME/ultibo/core/fpc/source
+
+make rtl_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make rtl OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make rtl_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl
+
 # '''Packages for ARMv7'''
 # 
 # Open a new terminal or continue with the one used to build the RTL, change to the <code>source</code> folder and ensure the path is updated:
@@ -224,6 +259,17 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  make packages_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv7-ultibo/packages
 # 
 # 
+
+make rtl_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH -Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv7-ultibo/packages
+
+popd
+
 # '''Ultibo RTL for ARMv6'''
 # 
 # The process for the ARMv6 RTL is very similar but there are many differences in the parameters, careful you don't use the wrong ones.
@@ -245,6 +291,15 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  make rtl_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv6-ultibo/rtl
 # 
 # 
+
+pushd $HOME/ultibo/core/fpc/source
+
+make rtl_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make rtl OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make rtl_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv6-ultibo/rtl
+
 # '''Packages for ARMv6'''
 # 
 # Open a new terminal or continue with the one used to build the RTL, change to the <code>source</code> folder and ensure the path is updated:
@@ -263,6 +318,17 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 # 
 #  make packages_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv6-ultibo/packages
 # 
+
+make rtl_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages_clean CROSSINSTALL=1 OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH -Fu$HOME/ultibo/core/fpc/units/armv6-ultibo/rtl" FPC=$HOME/ultibo/core/fpc/bin/fpc
+
+make packages_install CROSSINSTALL=1 FPCFPMAKE=$HOME/ultibo/core/fpc/bin/fpc CROSSOPT="-CpARMV6 -CfVFPV2 -CIARM -CaEABIHF -OoFASTMATH" OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv6 FPC=$HOME/ultibo/core/fpc/bin/fpc INSTALL_PREFIX=$HOME/ultibo/core/fpc INSTALL_UNITDIR=$HOME/ultibo/core/fpc/units/armv6-ultibo/packages
+
+popd
+
 # === Creating the Configuration files ===
 # ----
 # 
@@ -272,6 +338,9 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 # 
 #  cd $HOME/ultibo/core/fpc/bin
 # 
+
+pushd $HOME/ultibo/core/fpc/bin
+
 # Create a new <code>rpi.cfg</code> file:
 # 
 #  nano rpi.cfg
@@ -293,6 +362,22 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 # 
 # Save the file and do the same for the <code>rpi2.cfg</code>, <code>rpi3.cfg</code> and <code>qemuvpb.cfg</code> files, remember to replace <code><user></code> with your username:
 # 
+
+cat <<__EOF__ > rpi.cfg
+#
+# Raspberry Pi (A/B/A+/B+/Zero) specific config file
+#
+-CfVFPV2
+-CIARM
+-CaEABIHF
+-OoFASTMATH
+-Fu$HOME/ultibo/core/fpc/units/armv6-ultibo/rtl
+-Fu$HOME/ultibo/core/fpc/units/armv6-ultibo/packages
+-Fl$HOME/ultibo/core/fpc/units/armv6-ultibo/lib
+-Fl$HOME/ultibo/core/fpc/units/armv6-ultibo/lib/vc4
+__EOF__
+
+
 # Contents of rpi2.cfg
 # 
 #  #
@@ -308,6 +393,21 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  -Fl/home/<user>/ultibo/core/fpc/units/armv7-ultibo/lib/vc4
 # 
 # 
+
+cat <<__EOF__ > rpi2.cfg
+#
+# Raspberry Pi 2B specific config file
+#
+-CfVFPV3
+-CIARM
+-CaEABIHF
+-OoFASTMATH
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/packages
+-Fl$HOME/ultibo/core/fpc/units/armv7-ultibo/lib
+-Fl$HOME/ultibo/core/fpc/units/armv7-ultibo/lib/vc4
+__EOF__
+
 # Contents of rpi3.cfg
 # 
 #  #
@@ -323,6 +423,21 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  -Fl/home/<user>/ultibo/core/fpc/units/armv7-ultibo/lib/vc4
 # 
 # 
+
+cat <<__EOF__ > rpi.cfg
+#
+# Raspberry Pi 3B specific config file
+#
+-CfVFPV3
+-CIARM
+-CaEABIHF
+-OoFASTMATH
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/packages
+-Fl$HOME/ultibo/core/fpc/units/armv7-ultibo/lib
+-Fl$HOME/ultibo/core/fpc/units/armv7-ultibo/lib/vc4
+__EOF__
+
 # Contents of qemuvpb.cfg
 # 
 #  #
@@ -336,6 +451,22 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  -Fu/home/<user>/ultibo/core/fpc/units/armv7-ultibo/packages
 #  -Fl/home/<user>/ultibo/core/fpc/units/armv7-ultibo/lib
 # 
+
+cat <<__EOF__ > qemuvpb.cfg
+#
+# QEMU VersatilePB specific config file
+#
+-CfVFPV3
+-CIARM
+-CaEABIHF
+-OoFASTMATH
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/rtl
+-Fu$HOME/ultibo/core/fpc/units/armv7-ultibo/packages
+-Fl$HOME/ultibo/core/fpc/units/armv7-ultibo/lib
+__EOF__
+
+popd
+
 # === Compiling an Application ===
 # ----
 # 
