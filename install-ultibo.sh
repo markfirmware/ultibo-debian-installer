@@ -40,7 +40,6 @@ get FPC
 
 apt-get update && apt-get -y install lazarus && fpc -i
 
-
 # === Building Free Pascal (Ultibo Edition) ===
 # ----
 # 
@@ -74,6 +73,7 @@ apt-get update && apt-get -y install lazarus && fpc -i
 # 
 #  $HOME/ultibo/core/fpc
 # 
+# 
 
 apt-get -y install unzip
 mkdir -p unzip
@@ -90,14 +90,12 @@ mv unzip/Core-master/source/packages/ultibounits \
 mv unzip/Core-master/units \
        $HOME/ultibo/core/fpc/units
 
-# 
 # Once this is done, open a terminal window and change to the folder containing the Ultibo sources:
 # 
 #  cd $HOME/ultibo/core/fpc/source
 # 
 
 pushd $HOME/ultibo/core/fpc/source
-
 
 # Do the following steps in order, checking that each was completed successfully before continuing:
 # 
@@ -376,7 +374,6 @@ cat <<__EOF__ > rpi.cfg
 -Fl$HOME/ultibo/core/fpc/units/armv6-ultibo/lib
 -Fl$HOME/ultibo/core/fpc/units/armv6-ultibo/lib/vc4
 __EOF__
-
 
 # Contents of rpi2.cfg
 # 
