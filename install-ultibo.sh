@@ -40,20 +40,7 @@ get FPC
 
 apt-get update && apt-get -y install lazarus && fpc -i
 
-patch <<__EOF__
---- fpc.cfg	2017-10-09 05:03:30.666178320 -0400
-+++ /etc/fpc.cfg	2017-10-09 04:15:56.983456181 -0400
-@@ -282,7 +282,9 @@
- # If you don't want so much verbosity use
- #-vw
- # multiarch library search path
-+#IFDEF Linux
- -Fl/usr/lib/$fpctarget-*
-+#ENDIF
- # Third party units should be installe in a, multi-arch compatible location.
- # Units should be installed in /usr/lib/$fpctarget-gnu/fp-units-2.6.2/$pkg/.
- # Ech fp-units package should install a configuration file called $pkg.cfg in
-__EOF__
+sed -i 's|^-Fl/usr/lib/\$fpctarget-\*|#IFDEF Linux\n\0\n#ENDIF|' /etc/fpc.cfg
 
 # === Building Free Pascal (Ultibo Edition) ===
 # ----
