@@ -6,7 +6,7 @@ set -x -e
 # It will destroy the current ultibo installation at $HOME/ulibo/core and re-install it
 #
 
-rm -rf $HOME/ultibo downloads preloads unzip
+rm -rf $HOME/ultibo downloads unzip
 
 function get {
     wget --quiet -O downloads/$1.zip https://github.com/ultibohub/$1/archive/master.zip
@@ -39,6 +39,21 @@ get FPC
 # 
 
 apt-get update && apt-get -y install lazarus && fpc -i
+
+patch <<__EOF__
+--- fpc.cfg	2017-10-09 05:03:30.666178320 -0400
++++ /etc/fpc.cfg	2017-10-09 04:15:56.983456181 -0400
+@@ -282,7 +282,9 @@
+ # If you don't want so much verbosity use
+ #-vw
+ # multiarch library search path
++#IFDEF Linux
+ -Fl/usr/lib/$fpctarget-*
++#ENDIF
+ # Third party units should be installe in a, multi-arch compatible location.
+ # Units should be installed in /usr/lib/$fpctarget-gnu/fp-units-2.6.2/$pkg/.
+ # Ech fp-units package should install a configuration file called $pkg.cfg in
+__EOF__
 
 # === Building Free Pascal (Ultibo Edition) ===
 # ----
@@ -149,14 +164,15 @@ $HOME/ultibo/core/fpc/bin/fpcmkcfg -d basepath=$HOME/ultibo/core/fpc/lib/fpc/3.1
 #  cp $HOME/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/bin/strip $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
 # 
 
-popd
+apt-get -y install binutils-arm-none-eabi
 
-tar zxf preloads.tgz
-cp preloads/arm-none-eabi/bin/as      $HOME/ultibo/core/fpc/bin/arm-ultibo-as && \
-cp preloads/arm-none-eabi/bin/ld      $HOME/ultibo/core/fpc/bin/arm-ultibo-ld && \
-cp preloads/arm-none-eabi/bin/objcopy $HOME/ultibo/core/fpc/bin/arm-ultibo-objcopy && \
-cp preloads/arm-none-eabi/bin/objdump $HOME/ultibo/core/fpc/bin/arm-ultibo-objdump && \
-cp preloads/arm-none-eabi/bin/strip   $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
+cp /usr/bin/arm-none-eabi-as      $HOME/ultibo/core/fpc/bin/arm-ultibo-as
+cp /usr/bin/arm-none-eabi-ld      $HOME/ultibo/core/fpc/bin/arm-ultibo-ld
+cp /usr/bin/arm-none-eabi-objcopy $HOME/ultibo/core/fpc/bin/arm-ultibo-objcopy
+cp /usr/bin/arm-none-eabi-objdump $HOME/ultibo/core/fpc/bin/arm-ultibo-objdump
+cp /usr/bin/arm-none-eabi-strip   $HOME/ultibo/core/fpc/bin/arm-ultibo-strip
+
+popd
 
 # If you like you can now delete the extracted folder because none of the other files it contains are needed for Ultibo.
 # 
@@ -191,8 +207,6 @@ export PATH=$HOME/ultibo/core/fpc/bin:$PATH
 # 
 #  cp $HOME/ultibo/core/fpc/source/compiler/ppcrossarm $HOME/ultibo/core/fpc/bin/ppcrossarm
 # 
-
-apt-get -y install libc6-i386
 
 make distclean OS_TARGET=ultibo CPU_TARGET=arm SUBARCH=armv7a BINUTILSPREFIX=arm-ultibo- FPCOPT="-dFPC_ARMHF" CROSSOPT="-CpARMV7A -CfVFPV3 -CIARM -CaEABIHF -OoFASTMATH" FPC=$HOME/ultibo/core/fpc/bin/ppcx64
 
