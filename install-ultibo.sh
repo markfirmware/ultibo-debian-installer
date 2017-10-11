@@ -40,6 +40,8 @@ get FPC
 
 apt-get update && apt-get -y install lazarus && fpc -i
 
+# Fix problem where /usr/lib .a files are incorrectly included for SEARCH_DIR in link.res for Ultibo target
+
 sed -i 's|^-Fl/usr/lib/\$fpctarget-\*|#IFDEF Linux\n\0\n#ENDIF|' /etc/fpc.cfg
 
 # === Building Free Pascal (Ultibo Edition) ===
@@ -422,7 +424,7 @@ __EOF__
 # 
 # 
 
-cat <<__EOF__ > rpi.cfg
+cat <<__EOF__ > rpi3.cfg
 #
 # Raspberry Pi 3B specific config file
 #
